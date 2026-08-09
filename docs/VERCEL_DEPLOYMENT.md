@@ -47,6 +47,8 @@ Import the same repository again and configure:
 
 Set `BACKEND_URL=https://<api-project>.vercel.app` for Production. Use a staging API URL for Preview if previews must not access production data. Do not add a trailing slash.
 
+`BACKEND_URL` is declared in the shared Turbo build environment allowlist so Vercel can pass it into the production Next.js build. Do not add database or Supabase secret variables to the web project.
+
 ## 4. Verify the Deployment
 
 - `/` redirects to `/shell`; unauthenticated shell access redirects to `/auth`.
