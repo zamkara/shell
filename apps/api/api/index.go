@@ -3,7 +3,7 @@ package handler
 import (
 	"net/http"
 
-	"terabe/internal/httpapi"
+	"terabe/httpapi"
 )
 
 var application = httpapi.NewHandler()

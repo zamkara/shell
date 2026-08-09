@@ -17,7 +17,7 @@ Vercel Serverless functions **do not support outbound IPv6**. Supabase's direct 
 ## 3. Architecture Structure
 Code is fully reusable and modular:
 - `api/index.go` - The single Vercel Go Function entrypoint.
-- `internal/httpapi/` - Shared router and HTTP handlers used by Vercel and the local server.
+- `httpapi/` - Shared router and HTTP handlers used by Vercel and the local server. This package must remain outside `internal/` because Vercel's generated Go wrapper imports the Function through a different module path.
 - `internal/db/` - Singleton connection pool manager.
 - `internal/middlewares/` - Auth and RBAC interceptors.
 - `internal/models/` - Struct definitions representing DB schemas.

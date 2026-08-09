@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"terabe/internal/httpapi"
+	"terabe/httpapi"
 )
 
 func main() {
