@@ -26,6 +26,19 @@ func GetFAQs(category, search string, page, limit int) ([]models.FAQSummary, int
 	})
 }
 
+func GetFullFAQs(category, search string, page, limit int) ([]models.FAQ, int, error) {
+	where := `WHERE ($1 = '' OR category = $1) AND ($2 = '' OR question ILIKE '%' || $2 || '%' OR answer ILIKE '%' || $2 || '%' OR category ILIKE '%' || $2 || '%')`
+	return queryCollection(collectionQuery{
+		listSQL:  `SELECT id, category, question, answer, order_index FROM faqs ` + where + ` ORDER BY order_index ASC, id ASC LIMIT $3 OFFSET $4`,
+		countSQL: `SELECT COUNT(*) FROM faqs ` + where,
+		args:     []interface{}{category, search}, page: page, limit: limit,
+	}, func(row pgx.CollectableRow) (models.FAQ, error) {
+		var item models.FAQ
+		err := row.Scan(&item.ID, &item.Category, &item.Question, &item.Answer, &item.OrderIndex)
+		return item, err
+	})
+}
+
 func GetFAQ(id string) (models.FAQ, error) {
 	return queryContentDetail(`SELECT id, category, question, answer, order_index FROM faqs WHERE id=$1`, id, func(row pgx.Row) (models.FAQ, error) {
 		var item models.FAQ
@@ -60,6 +73,19 @@ func GetPricingTiers(search string, page, limit int) ([]models.PricingTierSummar
 	}, func(row pgx.CollectableRow) (models.PricingTierSummary, error) {
 		var item models.PricingTierSummary
 		err := row.Scan(&item.ID, &item.Name)
+		return item, err
+	})
+}
+
+func GetFullPricingTiers(search string, page, limit int) ([]models.PricingTier, int, error) {
+	where := `WHERE ($1 = '' OR name ILIKE '%' || $1 || '%' OR basis ILIKE '%' || $1 || '%' OR for_desc ILIKE '%' || $1 || '%')`
+	return queryCollection(collectionQuery{
+		listSQL:  `SELECT id, name, basis, for_desc, items, order_index FROM pricing_tiers ` + where + ` ORDER BY order_index ASC, id ASC LIMIT $2 OFFSET $3`,
+		countSQL: `SELECT COUNT(*) FROM pricing_tiers ` + where,
+		args:     []interface{}{search}, page: page, limit: limit,
+	}, func(row pgx.CollectableRow) (models.PricingTier, error) {
+		var item models.PricingTier
+		err := row.Scan(&item.ID, &item.Name, &item.Basis, &item.ForDesc, &item.Items, &item.OrderIndex)
 		return item, err
 	})
 }
@@ -101,6 +127,22 @@ func GetSiteSettings(key, search string, page, limit int) ([]models.SiteSettingS
 		var item models.SiteSettingSummary
 		err := row.Scan(&item.Key)
 		return item, err
+	})
+}
+
+func GetFullSiteSettings(key, search string, page, limit int) ([]models.SiteSetting, int, error) {
+	where := `WHERE ($1 = '' OR key = $1) AND ($2 = '' OR key ILIKE '%' || $2 || '%' OR value::text ILIKE '%' || $2 || '%')`
+	return queryCollection(collectionQuery{
+		listSQL:  `SELECT key, value FROM site_settings ` + where + ` ORDER BY key ASC LIMIT $3 OFFSET $4`,
+		countSQL: `SELECT COUNT(*) FROM site_settings ` + where,
+		args:     []interface{}{key, search}, page: page, limit: limit,
+	}, func(row pgx.CollectableRow) (models.SiteSetting, error) {
+		var item models.SiteSetting
+		var raw []byte
+		if err := row.Scan(&item.Key, &raw); err != nil {
+			return item, err
+		}
+		return item, json.Unmarshal(raw, &item.Value)
 	})
 }
 

@@ -12,6 +12,8 @@ All collection endpoints (`/api/projects`, `/api/faqs`, `/api/pricing`, and `/ap
 
 Mengambil daftar ringkas proyek portofolio. Endpoint ini hanya mengembalikan `id`, `title`, dan `tagline` untuk kebutuhan list.
 
+Konsumen publik yang merender kartu proyek dapat memakai `?view=card`. View ini mengembalikan tepat `id`, `slug`, `title`, `tags`, `image_url`, `image_thumbnail_url`, dan `ratio`, serta hanya memuat proyek berstatus `published`. Field detail berat seperti `media`, `meta`, dan `stats` tetap hanya tersedia di endpoint detail.
+
 **Contoh Request:**
 
 ```bash
@@ -41,15 +43,21 @@ Mengambil satu proyek lengkap saat pengguna membuka proyek dari list. Endpoint i
 
 Mengambil daftar ringkas FAQ berisi `id` dan `question`. Gunakan `?category=home` atau `?category=pricing` untuk membatasi kategori. `GET /api/faqs/<UUID>` mengambil seluruh field satu FAQ saat item dibuka.
 
+Konsumen publik dapat memakai `?view=full` untuk mengambil FAQ yang sudah terfilter dalam satu collection request tanpa melakukan detail request per item.
+
 `POST`, `PUT?id=<UUID>`, dan `DELETE?id=<UUID>` tersedia untuk admin terautentikasi.
 
 ### 1.5 `GET /api/pricing`
 
 Mengambil daftar ringkas pricing tier berisi `id` dan `name` dalam urutan `order_index`. `GET /api/pricing/<UUID>` mengambil seluruh field satu tier saat item dibuka. `POST`, `PUT?id=<UUID>`, dan `DELETE?id=<UUID>` tersedia untuk admin terautentikasi.
 
+Gunakan `?view=full` untuk mengambil tier lengkap dalam satu collection request.
+
 ### 1.6 `/api/content`
 
 `GET /api/content` mengembalikan daftar ringkas berisi `key`; `GET /api/content/<key>` mengambil nilai lengkap satu setting saat dibuka. Filter exact `?key=process_steps` tetap tersedia pada endpoint daftar. `PUT /api/content` menerima `{ "key": string, "value": any }`; `DELETE /api/content?id=<key>` menghapus satu setting. Mutasi memerlukan admin terautentikasi.
+
+Konsumen situs dapat memakai `?view=full` untuk mengambil seluruh pasangan `key` dan `value` dalam satu query collection. View ini digunakan Petot agar konfigurasi global tidak menghasilkan N+1.
 
 ---
 

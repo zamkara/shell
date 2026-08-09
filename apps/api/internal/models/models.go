@@ -52,3 +52,16 @@ type ProjectSummary struct {
 	Title   string  `json:"title"`
 	Tagline *string `json:"tagline,omitempty"`
 }
+
+// ProjectCard contains the bounded set of fields required by public project
+// listings. Large detail-only fields such as media, meta, and stats remain on
+// the detail endpoint.
+type ProjectCard struct {
+	ID                string   `json:"id"`
+	Slug              string   `json:"slug"`
+	Title             string   `json:"title"`
+	Tags              []string `json:"tags,omitempty"`
+	ImageURL          string   `json:"image_url"`
+	ImageThumbnailURL string   `json:"image_thumbnail_url"`
+	Ratio             string   `json:"ratio"`
+}

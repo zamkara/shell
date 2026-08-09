@@ -25,6 +25,21 @@ func GetProjectSummaries(search string, page, limit int) ([]models.ProjectSummar
 	})
 }
 
+// GetProjectCards returns the exact fields needed to render public project
+// collections. It deliberately excludes gallery and JSONB detail payloads.
+func GetProjectCards(search string, page, limit int, publishedOnly bool) ([]models.ProjectCard, int, error) {
+	where := `WHERE ($1 = FALSE OR status = 'published') AND ($2 = '' OR title ILIKE '%' || $2 || '%' OR COALESCE(tagline, '') ILIKE '%' || $2 || '%')`
+	return queryCollection(collectionQuery{
+		listSQL:  `SELECT id, slug, title, tags, image_url, image_thumbnail_url, ratio FROM projects ` + where + ` ORDER BY created_at DESC LIMIT $3 OFFSET $4`,
+		countSQL: `SELECT COUNT(*) FROM projects ` + where,
+		args:     []interface{}{publishedOnly, search}, page: page, limit: limit,
+	}, func(row pgx.CollectableRow) (models.ProjectCard, error) {
+		var item models.ProjectCard
+		err := row.Scan(&item.ID, &item.Slug, &item.Title, &item.Tags, &item.ImageURL, &item.ImageThumbnailURL, &item.Ratio)
+		return item, err
+	})
+}
+
 // GetProjectByID returns the complete editable project only when it is opened.
 func GetProjectByID(id string) (*models.Project, error) {
 	pool := db.GetConnection()

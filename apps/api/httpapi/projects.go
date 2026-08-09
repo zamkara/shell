@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strings"
 
 	"terabe/internal/models"
 	"terabe/internal/repositories"
@@ -13,6 +14,19 @@ func ProjectsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method != http.MethodGet {
 		http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
+		return
+	}
+
+	view := r.URL.Query().Get("view")
+	if view == "card" {
+		publishedOnly := !strings.HasPrefix(r.URL.Path, "/api/admin/")
+		serveCollection(w, r, "projects", func(params CollectionParams) ([]models.ProjectCard, int, error) {
+			return repositories.GetProjectCards(params.Search, params.Page, params.Limit, publishedOnly)
+		})
+		return
+	}
+	if view != "" && view != "summary" {
+		http.Error(w, `{"error":"Unsupported collection view"}`, http.StatusBadRequest)
 		return
 	}
 

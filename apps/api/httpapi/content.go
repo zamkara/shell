@@ -15,6 +15,12 @@ func writeJSON(w http.ResponseWriter, status int, value interface{}) {
 
 func FAQsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
+		if r.URL.Query().Get("view") == "full" {
+			serveCollection(w, r, "faqs", func(params CollectionParams) ([]models.FAQ, int, error) {
+				return repositories.GetFullFAQs(r.URL.Query().Get("category"), params.Search, params.Page, params.Limit)
+			})
+			return
+		}
 		serveCollection(w, r, "faqs", func(params CollectionParams) ([]models.FAQSummary, int, error) {
 			return repositories.GetFAQs(r.URL.Query().Get("category"), params.Search, params.Page, params.Limit)
 		})
@@ -33,6 +39,12 @@ func FAQDetailHandler(w http.ResponseWriter, r *http.Request) {
 
 func PricingHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
+		if r.URL.Query().Get("view") == "full" {
+			serveCollection(w, r, "pricing", func(params CollectionParams) ([]models.PricingTier, int, error) {
+				return repositories.GetFullPricingTiers(params.Search, params.Page, params.Limit)
+			})
+			return
+		}
 		serveCollection(w, r, "pricing", func(params CollectionParams) ([]models.PricingTierSummary, int, error) {
 			return repositories.GetPricingTiers(params.Search, params.Page, params.Limit)
 		})
@@ -51,6 +63,12 @@ func PricingDetailHandler(w http.ResponseWriter, r *http.Request) {
 
 func ContentHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
+		if r.URL.Query().Get("view") == "full" {
+			serveCollection(w, r, "content", func(params CollectionParams) ([]models.SiteSetting, int, error) {
+				return repositories.GetFullSiteSettings(r.URL.Query().Get("key"), params.Search, params.Page, params.Limit)
+			})
+			return
+		}
 		serveCollection(w, r, "content", func(params CollectionParams) ([]models.SiteSettingSummary, int, error) {
 			return repositories.GetSiteSettings(r.URL.Query().Get("key"), params.Search, params.Page, params.Limit)
 		})
