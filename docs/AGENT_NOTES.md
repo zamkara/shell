@@ -119,6 +119,7 @@ Validate project `meta` and `stats` as JSON, pass them as JSON text, and cast th
 ## Resolved Findings
 
 - Production deployment uses two Vercel Projects imported from the same monorepo: `apps/api` is a single Go Function entrypoint and `apps/web` is the Next.js project. The API deploys first; the web production build requires its deployed origin through `BACKEND_URL` and never falls back to localhost in production.
+- The API workspace intentionally declares no package-level `build` script. Vercel may run its detected `turbo run build` preliminary command, but Go compilation must remain owned by the Vercel Go Runtime builder; a package script calling `go build` runs in Vercel's Node build image where `go` is unavailable.
 - The public API health response no longer opens a database connection or exposes the PostgreSQL server version. Serverless pgx pools are capped at four connections per warm function instance and use the Supabase-compatible simple protocol.
 - Vercel environment values are documented in `docs/VERCEL_DEPLOYMENT.md`. Production and Preview must be configured independently; Preview should use staging infrastructure to avoid mutating production data.
 

@@ -17,6 +17,8 @@ Import the repository into Vercel and configure:
 - Framework Preset: Other
 - Production Branch: `main`
 
+Leave Vercel's detected Turbo build command unchanged. The `api` workspace intentionally has no Node `build` script: Vercel's Go Runtime compiles `api/index.go` in its runtime builder instead of trying to execute the unavailable `go` binary inside the preliminary pnpm/Turbo build image.
+
 Set these encrypted variables for Production and the appropriate Preview environment:
 
 ```text
