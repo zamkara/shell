@@ -21,6 +21,8 @@ Leave Vercel's detected Turbo build command unchanged. The `api` workspace inten
 
 The API project declares the empty `public` output directory in `vercel.json`. It satisfies Vercel's preliminary monorepo output check; application requests remain served by the Go Function and its API rewrites.
 
+The API domain root redirects to `/api`, where the lightweight health response is served. This keeps direct browser visits useful without adding a separate static landing page.
+
 Set these encrypted variables for Production and the appropriate Preview environment:
 
 ```text
