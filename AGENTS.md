@@ -51,3 +51,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Verify request counts in the browser network panel when changing routing, authentication, or client-side data loading.
 
 <!-- END:database-query-rules -->
+
+<!-- BEGIN:content-ownership-rules -->
+
+# Content Ownership Rules
+
+- Keep source-repository contracts in source code: local asset paths, application route paths, component structure, CSS tokens, and other implementation-only configuration do not belong in the database.
+- Store actual data in the backend: user-facing copy, SEO identity, external content/resource URLs, collections, records, and editable content configuration must come from the API.
+- A local file may contain both categories. For example, a generated manifest may use API-backed name metadata while keeping local icon paths in source.
+
+<!-- END:content-ownership-rules -->

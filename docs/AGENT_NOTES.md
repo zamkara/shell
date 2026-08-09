@@ -153,3 +153,8 @@ Validate project `meta` and `stats` as JSON, pass them as JSON text, and cast th
 - `apps/api/database/seed_petot.sql` is the idempotent handoff seed for that content. Run `schema.sql` (and the project-status migration for an existing database) before the seed.
 - The seed publishes all six listed projects. Only Lezza has full challenge, solution, metadata, statistics, hero, and gallery values in Petot; the remaining five retain their exact catalog fields and intentionally have no invented detail content.
 - Global Petot constants are stored in `site_settings` as JSONB under descriptive keys (`process`, `build_items`, `services`, `engagements`, `how_we_work`, `stats`, `brands`, `contact_links`, `nav`, and image keys). FAQs and pricing tiers use their dedicated tables.
+# Content ownership boundary
+
+- Local repository paths and implementation contracts remain in source code, including local assets, application routes, component structure, and CSS/theme tokens.
+- User-facing copy, SEO identity, external resource URLs, collections, and editable configuration are backend data consumed through the API.
+- Mixed artifacts must keep this separation at field level; the Petot manifest reads its name from site content while retaining favicon paths locally.

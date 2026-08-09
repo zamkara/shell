@@ -25,6 +25,7 @@ out/
 build
 dist
 bin/
+/apps/api/database/
 
 # turbo
 .turbo
