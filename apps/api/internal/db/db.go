@@ -5,7 +5,9 @@ import (
 	"log"
 	"os"
 	"sync"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -24,11 +26,24 @@ func GetConnection() *pgxpool.Pool {
 		}
 
 		var err error
-		pool, err = pgxpool.New(context.Background(), dbUrl)
+		config, err := pgxpool.ParseConfig(dbUrl)
+		if err != nil {
+			log.Fatalf("Unable to parse database URL: %v\n", err)
+		}
+
+		// Session and transaction poolers accept the simple protocol. Keep each
+		// serverless instance's pool deliberately small to bound connection use.
+		config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+		config.MaxConns = 4
+		config.MinConns = 0
+		config.MaxConnIdleTime = 5 * time.Minute
+		config.MaxConnLifetime = 30 * time.Minute
+
+		pool, err = pgxpool.NewWithConfig(context.Background(), config)
 		if err != nil {
 			log.Fatalf("Unable to connect to database: %v\n", err)
 		}
 	})
-	
+
 	return pool
 }

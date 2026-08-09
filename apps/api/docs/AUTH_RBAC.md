@@ -17,22 +17,17 @@ Setelah JWT tervalidasi secara kriptografi, sistem perlu memverifikasi apakah ak
 - **`profiles`**: Terhubung langsung (berelasi) dengan tabel internal `auth.users` Supabase.
 - **`roles`**: Berisi daftar jabatan/otoritas (misal: `admin`, `editor`, `viewer`).
 - **`user_roles`**: *Table mapping* (Many-to-Many) yang menghubungkan pengguna dengan otoritas mereka.
+- **`permissions`**: Katalog izin berformat `module.action`.
+- **`role_permissions`**: Relasi izin efektif untuk setiap role.
 
 ### Alur Middleware Otorisasi
-Fungsi `RequireRoleMiddleware` mengambil `user_id` yang telah diekstrak dari JWT, lalu melakukan kueri ringan ke *database* untuk memastikan keberadaan relasi *role* yang disyaratkan.
+`LoadAccessMiddleware` mengambil seluruh role dan izin efektif pengguna dengan satu query agregat. `RequireRoleMiddleware` dan `RequirePermissionMiddleware` kemudian memeriksa snapshot request context tanpa query tambahan. Query count selalu satu per request terproteksi dan tidak bertambah mengikuti jumlah role atau permission.
 
 ```go
-// Contoh Pseudo-Logic di Middleware
-func RequireRoleMiddleware(requiredRole string) {
-    userID := extractSubFromJWT()
-    hasRole := db.CheckRole(userID, requiredRole)
-    if !hasRole {
-        return HTTP 403 Forbidden
-    }
-}
+Auth -> LoadAccess (1 query) -> RequireRole/RequirePermission (0 query) -> Handler
 ```
 
 ## 3. Keuntungan Arsitektur
 1. **Sangat Terisolasi:** Rute publik (`GET`) tidak terbebani pengecekan JWT.
 2. **Performa Tinggi:** Validasi JWT dilakukan secara lokal di *memory* Vercel (karena menggunakan *Public Key* dari JWKS).
-3. **Fleksibel:** Rute baru dapat dengan mudah dilindungi hanya dengan membungkusnya di dalam struktur *chaining middleware*.
+3. **Fleksibel:** Sidebar, toolbar, dan endpoint memakai key izin yang sama. Backend tetap menjadi otoritas; penyembunyian UI bukan kontrol keamanan.

@@ -1,21 +1,24 @@
-# shadcn/ui monorepo template
+# Almatera Landing Control Centre
 
-This is a Next.js monorepo template with shadcn/ui.
+Admin shell monorepo containing a Next.js frontend, a Go API, and shared shadcn UI primitives.
 
-## Adding components
+## Repository layout
 
-To add components to your app, run the following command at the root of your `web` app:
+- `apps/web` — authenticated Next.js shell and server-side BFF routes.
+- `apps/api` — Go API, Supabase authentication, PostgreSQL repositories, and the Vercel Function entrypoint.
+- `packages/ui` — shared UI primitives and global theme tokens.
+- `docs` — contributor findings and deployment instructions.
+
+## Local checks
 
 ```bash
-pnpm dlx shadcn@latest add button -c apps/web
+pnpm install --frozen-lockfile
+pnpm typecheck
+pnpm build
 ```
 
-This will place the ui components in the `packages/ui/src/components` directory.
+The developer controls `pnpm dev`. The Go API reads `apps/api/.env.local`; the web app reads `apps/web/.env.local` or its Vercel environment.
 
-## Using components
+## Deploying
 
-To use the components in your app, import them from the `ui` package.
-
-```tsx
-import { Button } from "@workspace/ui/components/button";
-```
+Deploy the API and web app as two Vercel Projects from the same Git repository. Follow [docs/VERCEL_DEPLOYMENT.md](docs/VERCEL_DEPLOYMENT.md) for the exact root directories, environment variables, deployment order, and verification checklist.

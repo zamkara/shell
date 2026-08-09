@@ -7,7 +7,7 @@
 - **Language:** Golang (`net/http` standard library - No external web frameworks like Gin/Fiber to keep it lightweight).
 - **Database:** PostgreSQL (Hosted on Supabase).
 - **Driver:** `github.com/jackc/pgx/v5/pgxpool`
-- **Hosting:** Vercel (Standalone Go Server via `main.go`).
+- **Hosting:** Vercel Go Function via `api/index.go`; `main.go` is the local server only.
 - **Domain:** `https://be.zamkara.uk`
 
 ## 2. Vercel & Supabase IPv4 Quirk (CRITICAL)
@@ -16,7 +16,8 @@ Vercel Serverless functions **do not support outbound IPv6**. Supabase's direct 
 
 ## 3. Architecture Structure
 Code is fully reusable and modular:
-- `api/` - HTTP Handlers (e.g., `projects.go`, `admin_projects.go`, `auth.go`).
+- `api/index.go` - The single Vercel Go Function entrypoint.
+- `internal/httpapi/` - Shared router and HTTP handlers used by Vercel and the local server.
 - `internal/db/` - Singleton connection pool manager.
 - `internal/middlewares/` - Auth and RBAC interceptors.
 - `internal/models/` - Struct definitions representing DB schemas.
@@ -25,16 +26,20 @@ Code is fully reusable and modular:
 
 ## 4. Authentication & Security (Phase 02)
 - **JWKS Verification (Asymmetric JWT):** The backend validates Supabase JWTs completely statelessly. It automatically fetches the Public Key (JWKS) from `SUPABASE_URL/auth/v1/.well-known/jwks.json` to verify ECC P-256 (ES256) signatures.
-- **Role Based Access Control (RBAC):** Admin endpoints are protected by two middlewares chained together:
+- **Role Based Access Control (RBAC):** Protected endpoints use this middleware chain:
   1. `SupabaseAuthMiddleware`: Validates the JWT cryptographically.
-  2. `RequireRoleMiddleware("admin")`: Queries the `user_roles` database table to ensure the `sub` (User ID) has the 'admin' role.
+  2. `LoadAccessMiddleware`: Loads all roles and effective permissions with one aggregate query.
+  3. `RequireRoleMiddleware` and/or `RequirePermissionMiddleware`: Checks the request-context snapshot without another query.
+- **Permission convention:** Use `module.action`, for example `projects.read` and `users.update`. The identity-management routes require both role `admin` and their method-specific permission.
+- **No N+1:** Never query inside a row loop. Collection handlers use a bounded aggregate-list query plus a count query.
 - **Auth Proxy:** Frontend apps should NOT call Supabase Auth directly. They must call `POST /api/auth/login`. This proxy endpoint hides the Supabase URL and returns the JWT directly to the frontend.
 
 ## 5. Environment Variables
 The Vercel environment must contain:
 1. `DATABASE_URL`: The Session Pooler IPv4 URL.
-2. `SUPABASE_URL`: e.g., `https://wqzoivfczavchrqykeay.supabase.co` (Used by JWKS and Auth Proxy).
+2. `SUPABASE_URL`: e.g., `https://PROJECT_REF.supabase.co` (Used by JWKS and Auth Proxy).
 3. `SUPABASE_ANON_KEY`: The Publishable Key (Used by Auth Proxy).
+4. `SUPABASE_SECRET_KEY`: Server-only secret used by the Users module to call Supabase Admin Auth. Legacy `SUPABASE_SERVICE_ROLE_KEY` is accepted as a fallback.
 
 ## 6. Frontend Integration (`petot` repo)
 - The frontend Next.js app (`petot`) consumes public data from `GET /api/projects`.

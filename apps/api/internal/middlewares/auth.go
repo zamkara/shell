@@ -15,7 +15,41 @@ import (
 
 type contextKey string
 
-const UserIDKey contextKey = "user_id"
+const (
+	UserIDKey   contextKey = "user_id"
+	AuthUserKey contextKey = "auth_user"
+	RoleKey     contextKey = "role"
+	AccessKey   contextKey = "access"
+)
+
+type AuthUser struct {
+	ID        string
+	Email     string
+	FullName  string
+	AvatarURL string
+}
+
+type AccessControl struct {
+	Roles       []string `json:"roles"`
+	Permissions []string `json:"permissions"`
+}
+
+func (access AccessControl) HasRole(role string) bool {
+	return contains(access.Roles, role)
+}
+
+func (access AccessControl) HasPermission(permission string) bool {
+	return contains(access.Permissions, permission)
+}
+
+func contains(values []string, wanted string) bool {
+	for _, value := range values {
+		if value == wanted {
+			return true
+		}
+	}
+	return false
+}
 
 var (
 	jwks        keyfunc.Keyfunc
@@ -30,7 +64,7 @@ func getJWKS() (keyfunc.Keyfunc, error) {
 			jwksInitErr = fmt.Errorf("SUPABASE_URL is not set for JWKS")
 			return
 		}
-		
+
 		supabaseURL = strings.TrimSuffix(supabaseURL, "/")
 		jwksURL := supabaseURL + "/auth/v1/.well-known/jwks.json"
 		jwks, jwksInitErr = keyfunc.NewDefault([]string{jwksURL})
@@ -41,13 +75,22 @@ func getJWKS() (keyfunc.Keyfunc, error) {
 // SupabaseAuthMiddleware memverifikasi JWT dari Supabase
 func SupabaseAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tokenString := ""
 		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			http.Error(w, `{"error": "Authorization header is missing"}`, http.StatusUnauthorized)
-			return
+		if authHeader != "" {
+			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+		} else {
+			// Fallback: cari dari Cookie jika Authorization header tidak ada
+			cookie, err := r.Cookie("access_token")
+			if err == nil {
+				tokenString = cookie.Value
+			}
 		}
 
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		if tokenString == "" {
+			http.Error(w, `{"error": "Authorization token is missing"}`, http.StatusUnauthorized)
+			return
+		}
 		if tokenString == authHeader {
 			http.Error(w, `{"error": "Invalid token format"}`, http.StatusUnauthorized)
 			return
@@ -77,11 +120,16 @@ func SupabaseAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// Ambil User ID (sub) dari Claims
+		// Ambil identitas user dari claims satu kali untuk semua handler berikutnya.
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
 			if sub, ok := claims["sub"].(string); ok {
-				// Masukkan User ID ke dalam context agar bisa dipakai di layer Handler
 				ctx := context.WithValue(r.Context(), UserIDKey, sub)
+				ctx = context.WithValue(ctx, AuthUserKey, AuthUser{
+					ID:        sub,
+					Email:     stringClaim(claims, "email"),
+					FullName:  metadataClaim(claims, "full_name", "name"),
+					AvatarURL: metadataClaim(claims, "avatar_url", "picture"),
+				})
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
@@ -91,8 +139,25 @@ func SupabaseAuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// RequireRoleMiddleware memverifikasi bahwa User ID memiliki Role spesifik di database
-func RequireRoleMiddleware(requiredRole string, next http.Handler) http.Handler {
+func stringClaim(claims jwt.MapClaims, key string) string {
+	value, _ := claims[key].(string)
+	return strings.TrimSpace(value)
+}
+
+func metadataClaim(claims jwt.MapClaims, keys ...string) string {
+	metadata, _ := claims["user_metadata"].(map[string]interface{})
+	for _, key := range keys {
+		if value, ok := metadata[key].(string); ok && strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
+// LoadAccessMiddleware loads all roles and effective permissions in one query.
+// Downstream role and permission checks are in-memory, so chained checks never
+// add database round trips or create N+1 behavior.
+func LoadAccessMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := r.Context().Value(UserIDKey).(string)
 		if !ok || userID == "" {
@@ -100,23 +165,52 @@ func RequireRoleMiddleware(requiredRole string, next http.Handler) http.Handler 
 			return
 		}
 
-		pool := db.GetConnection()
-
-		// Cek role user di database relasional kita
 		query := `
-			SELECT r.name 
-			FROM user_roles ur 
-			JOIN roles r ON ur.role_id = r.id 
-			WHERE ur.user_id = $1 AND r.name = $2
+			SELECT
+				COALESCE(array_agg(DISTINCT r.name) FILTER (WHERE r.name IS NOT NULL), ARRAY[]::text[]),
+				COALESCE(array_agg(DISTINCT p.key) FILTER (WHERE p.key IS NOT NULL), ARRAY[]::text[])
+			FROM user_roles ur
+			JOIN roles r ON r.id = ur.role_id
+			LEFT JOIN role_permissions rp ON rp.role_id = r.id
+			LEFT JOIN permissions p ON p.id = rp.permission_id
+			WHERE ur.user_id = $1
 		`
-		var roleName string
-		err := pool.QueryRow(r.Context(), query, userID, requiredRole).Scan(&roleName)
-		if err != nil || roleName == "" {
+		var access AccessControl
+		if err := db.GetConnection().QueryRow(r.Context(), query, userID).Scan(&access.Roles, &access.Permissions); err != nil {
+			http.Error(w, `{"error": "Failed to resolve access"}`, http.StatusInternalServerError)
+			return
+		}
+		ctx := context.WithValue(r.Context(), AccessKey, access)
+		if len(access.Roles) > 0 {
+			ctx = context.WithValue(ctx, RoleKey, access.Roles[0])
+		}
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func AccessFromContext(ctx context.Context) (AccessControl, bool) {
+	access, ok := ctx.Value(AccessKey).(AccessControl)
+	return access, ok
+}
+
+func RequireRoleMiddleware(requiredRole string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		access, ok := AccessFromContext(r.Context())
+		if !ok || !access.HasRole(requiredRole) {
 			http.Error(w, fmt.Sprintf(`{"error": "Forbidden: Requires %s role"}`, requiredRole), http.StatusForbidden)
 			return
 		}
+		next.ServeHTTP(w, r)
+	})
+}
 
-		// Lolos verifikasi Role, teruskan request
+func RequirePermissionMiddleware(permission string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		access, ok := AccessFromContext(r.Context())
+		if !ok || !access.HasPermission(permission) {
+			http.Error(w, fmt.Sprintf(`{"error": "Forbidden: Requires %s permission"}`, permission), http.StatusForbidden)
+			return
+		}
 		next.ServeHTTP(w, r)
 	})
 }

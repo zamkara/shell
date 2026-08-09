@@ -37,7 +37,7 @@ func SendResponse(w http.ResponseWriter, r *http.Request, data interface{}) {
 	if string(rawJson[0]) == "[" {
 		var list []map[string]interface{}
 		json.Unmarshal(rawJson, &list)
-		
+
 		var filteredList []map[string]interface{}
 		for _, item := range list {
 			filteredList = append(filteredList, filterMap(item, fieldMap))

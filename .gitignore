@@ -12,6 +12,10 @@ node_modules
 
 # testing
 coverage
+.local-tests/
+/seed_admin.js
+*.test
+coverage.out
 
 # next.js
 .next/
@@ -20,6 +24,7 @@ out/
 # production
 build
 dist
+bin/
 
 # turbo
 .turbo
@@ -27,6 +32,18 @@ dist
 # misc
 .DS_Store
 *.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+.mcp.json
+.idea/
+.vscode/
+/skills-lock.json
 
 # debug
 npm-debug.log*
@@ -36,6 +53,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+!**/.env.example
 
 # vercel
 .vercel

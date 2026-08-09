@@ -1,40 +1,24 @@
-package api
+package handler
 
 import (
-	"context"
-	"fmt"
-	"log"
 	"net/http"
-	"terabe/internal/db"
-	"terabe/internal/utils"
+
+	"terabe/internal/httpapi"
 )
 
-// Info response structure
-type APIInfo struct {
-	Status    string `json:"status"`
-	Message   string `json:"message"`
-	DBVersion string `json:"db_version,omitempty"`
-}
+var application = httpapi.NewHandler()
 
-func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	// Ambil koneksi Singleton (Reusable)
-	pool := db.GetConnection()
-
-	// Query
-	var version string
-	if err := pool.QueryRow(context.Background(), "SELECT version()").Scan(&version); err != nil {
-		log.Printf("Query failed: %v", err)
-		http.Error(w, fmt.Sprintf(`{"error": "Query failed: %v"}`, err), http.StatusInternalServerError)
-		return
+// Handler is the single Vercel Go Function entrypoint. The Vercel rewrite
+// supplies the original API path through __path so the shared ServeMux sees
+// the same request path as the local server.
+func Handler(w http.ResponseWriter, r *http.Request) {
+	if originalPath := r.URL.Query().Get("__path"); originalPath != "" {
+		query := r.URL.Query()
+		query.Del("__path")
+		r.URL.Path = originalPath
+		r.URL.RawPath = ""
+		r.URL.RawQuery = query.Encode()
 	}
 
-	// Buat objek respons
-	data := APIInfo{
-		Status:    "success",
-		Message:   "Golang Backend on Vercel is ready with Clean Architecture!",
-		DBVersion: version,
-	}
-
-	// Gunakan fungsi utilitas kita yang bisa memfilter fields secara dinamis
-	utils.SendResponse(w, r, data)
+	application.ServeHTTP(w, r)
 }
