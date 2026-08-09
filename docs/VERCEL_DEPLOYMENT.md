@@ -19,6 +19,8 @@ Import the repository into Vercel and configure:
 
 Leave Vercel's detected Turbo build command unchanged. The `api` workspace intentionally has no Node `build` script: Vercel's Go Runtime compiles `api/index.go` in its runtime builder instead of trying to execute the unavailable `go` binary inside the preliminary pnpm/Turbo build image.
 
+The API project declares the empty `public` output directory in `vercel.json`. It satisfies Vercel's preliminary monorepo output check; application requests remain served by the Go Function and its API rewrites.
+
 Set these encrypted variables for Production and the appropriate Preview environment:
 
 ```text
