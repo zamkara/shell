@@ -34,6 +34,12 @@ export interface Project {
   created_at?: string
 }
 
+interface LegacyProjectStat {
+  label?: unknown
+  value?: unknown
+  suffix?: unknown
+}
+
 export function normalizeProject(value: Partial<Project>): Project {
   const imageURL = value.image_url ?? ""
   const heroURL = value.hero_url ?? ""
@@ -44,7 +50,7 @@ export function normalizeProject(value: Partial<Project>): Project {
   const stats = Array.isArray(value.stats)
     ? Object.fromEntries(
         value.stats
-          .map((item: any) => [
+          .map((item: LegacyProjectStat) => [
             String(item?.label ?? ""),
             `${item?.value ?? ""}${item?.suffix ?? ""}`,
           ])

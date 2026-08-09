@@ -9,7 +9,8 @@
       "env": ["BACKEND_URL"]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": ["^lint"],
+      "env": ["NODE_ENV"]
     },
     "format": {
       "dependsOn": ["^format"]

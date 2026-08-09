@@ -33,7 +33,7 @@ async function proxyToBackend(req: Request) {
     })
 
     const responseText = await res.text()
-    let data: any
+    let data: unknown
     try {
       data = JSON.parse(responseText)
     } catch {
@@ -41,9 +41,12 @@ async function proxyToBackend(req: Request) {
     }
 
     return NextResponse.json(data, { status: res.status })
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: error.message || "Proxy request failed" },
+      {
+        error:
+          error instanceof Error ? error.message : "Proxy request failed",
+      },
       { status: 500 }
     )
   }

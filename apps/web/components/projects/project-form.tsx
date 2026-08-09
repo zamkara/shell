@@ -5,7 +5,6 @@ import { Input } from "@workspace/ui/components/input"
 import { AdaptiveTextInput } from "@workspace/ui/components/adaptive-text-input"
 import { Label } from "@workspace/ui/components/label"
 import { Textarea } from "@workspace/ui/components/textarea"
-import { Button } from "@workspace/ui/components/button"
 import { BadgeInput } from "@workspace/ui/components/badge-input"
 import { KeyValueInput } from "@workspace/ui/components/key-value-input"
 import {
@@ -53,7 +52,6 @@ function FormField({
 
 export function ProjectForm({ project, onSaveSuccess }: ProjectFormProps) {
   const formRef = React.useRef<HTMLFormElement>(null)
-  const [isSaving, setIsSaving] = React.useState(false)
   const [formData, setFormData] = React.useState<Project>(emptyProject)
 
   React.useEffect(() => {
@@ -92,7 +90,6 @@ export function ProjectForm({ project, onSaveSuccess }: ProjectFormProps) {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSaving(true)
     try {
       const payload: Project = {
         ...formData,
@@ -116,10 +113,8 @@ export function ProjectForm({ project, onSaveSuccess }: ProjectFormProps) {
       }
 
       onSaveSuccess()
-    } catch (err: any) {
-      alert(err.message)
-    } finally {
-      setIsSaving(false)
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : "Failed to save project")
     }
   }
 
